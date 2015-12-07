@@ -12,4 +12,6 @@ Output:
 Main: Impossible case alternative
 ```
 
+This does not happen when you turn optimisations off with `-O0`.
+
 It needs a few dependencies, mainly `aeson`; for these, see `impossible-case-alternative-repro.cabal`.
