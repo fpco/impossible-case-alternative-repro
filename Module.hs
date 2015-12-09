@@ -33,15 +33,15 @@ module Module
 
 import           Control.Applicative -- for GHC 7.8 compat
 import           Control.Monad.State.Strict
-import           Control.Monad.Trans.Either
+import           Control.Monad.Trans.Except
 import           Data.Aeson.Types as X hiding (withObject,withArray)
 import           Language.Haskell.TH
 
 -- Monad transformer around `aeson`'s `Parser`:
---   - EitherT () for early returns (see `earlyExit`)
+--   - ExceptT () for early returns (see `earlyExit`)
 --   - StateT (JSONState context) to keep track of where in the data
 --     structure we are (`context`) and what our path to that was `[()]`.
-newtype JSON context a = JSON { runJSON :: EitherT () (StateT (JSONState context) Parser) a }
+newtype JSON context a = JSON { runJSON :: ExceptT () (StateT (JSONState context) Parser) a }
   deriving (Monad,Applicative,Functor)
 
 data JSONState context = JSONState
@@ -73,13 +73,13 @@ inside recordField =
             withCtx $field (liftNewStateT newContext m) |]
 
 getContext :: JSON context context
-getContext = JSON (EitherT (StateT (\s -> return (Right (jsonContext s),s))))
+getContext = JSON (ExceptT (StateT (\s -> return (Right (jsonContext s),s))))
 
 
 runJSONParser :: JSON () a -> Either String (Either () a)
 runJSONParser f =
   case parseEither
-         (const (runStateT (runEitherT (runJSON f))
+         (const (runStateT (runExceptT (runJSON f))
                            (JSONState [] [] ())))
          () of
     Right (result,_) -> return result
@@ -90,13 +90,13 @@ liftStateT :: StateT (JSONState context) Parser a -> JSON context a
 liftStateT = JSON . lift
 
 earlyExit :: JSON context a
-earlyExit = JSON (left ())
+earlyExit = JSON (throwE ())
 
 liftNewStateT :: newcontext -> JSON newcontext a -> JSON context a
 liftNewStateT newcontext m =
-  JSON (EitherT (StateT (\(JSONState stack ns orig) ->
+  JSON (ExceptT (StateT (\(JSONState stack ns orig) ->
                            do (result,JSONState _ ns' _) <-
-                                runStateT (runEitherT (runJSON m))
+                                runStateT (runExceptT (runJSON m))
                                           (JSONState stack ns newcontext)
                               return (result,JSONState stack ns' orig))))
 
