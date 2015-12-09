@@ -66,7 +66,7 @@ pushStack x xs = x : xs -- Impossible case alternative
 --   $(inside 'mytypeValue) :: JSON Double b -> JSON Mytype b
 inside :: Name -> Q Exp
 inside recordField =
-  do VarI _ (AppT (AppT ArrowT (ConT _ty)) _) _ _ <- reify recordField
+  do VarI _ (AppT (AppT ArrowT (ConT _ty)) _) _ <- reify recordField
      let field = stringE (nameBase recordField)
      [|\m ->
          do newContext <- fmap $(varE recordField) getContext
