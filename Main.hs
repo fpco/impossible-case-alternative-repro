@@ -5,35 +5,31 @@ module Main
   ) where
 
 import           Control.Applicative -- for GHC 7.8 compat
-import           Module (JSON, liftNewStateT, runJSONParser, inside, earlyExit, Mytype(mytypeValue))
+import           System.Environment (getArgs)
+import           Module (JSON, liftNewStateT, runJSONParser, inside, earlyExit, Mytype(mytypeValue,mytypeValue2), Mytype2(mytype2Value), Notification(..), exitWith)
+import qualified Data.List.NonEmpty as NE
 
+import Debug.Trace
 
 main :: IO ()
-main = print (runJSONParser (liftNewStateT (error "unused state") fun1))
+main = do
+  print (runJSONParser (liftNewStateT (error "unused state") fun1))
 
-fun1 :: JSON s Int
-fun1 = do
-  _ <- liftNewStateT undefined fun2
-  return (error "will not even get here")
-
-fun2 :: JSON Mytype (Int,())
-fun2 =
+fun1 :: JSON Mytype Float
+fun1 =
   do
-     x <- $(inside 'mytypeValue)
-      ((
+     ints <- liftNewStateT undefined fun2
 
-       -- Impossible case alternative
-       (do p <- earlyExit <* error "bad"
-           return p)
+     _ <- traceShow "before eval" $ error (show ints)
 
-       -- No Impossible case alternative
-       --   output with GHC 7.10: Main: will not even get here
-       --   output with GHC 7.8:  Left "" (that also seems wrong)
-       -- (both using aeson-0.8.0.2)
-       -- (earlyExit <* error "bad")
+     undefined
 
-      ) :: JSON Double Int )
+fun2 :: JSON Mytype Int
+fun2 = do
+  x <- $(inside 'mytypeValue2) ($(inside 'mytype2Value) (exitWith Notification)) -- segfaults
+  return x
 
-     return (x,())
+  -- x <- $(inside 'mytypeValue2) (exitWith Notification)                      -- going only until depth 1: doesn't segfault
+  -- return x
 
--- {-# NOINLINE fun2 #-} -- fixes the `Impossible case alternative`
+  -- $(inside 'mytypeValue2) ($(inside 'mytype2Value) (exitWith Notification)) -- not using do notation: doesn't segfault
