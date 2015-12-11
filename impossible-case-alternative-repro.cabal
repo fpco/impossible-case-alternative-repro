@@ -10,6 +10,7 @@ executable impossible-case-alternative-repro
       base >= 4 && <5
     , aeson
     , transformers-compat
+    , transformers
     , mtl
     , template-haskell
 
